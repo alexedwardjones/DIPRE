@@ -17,19 +17,23 @@ import org.jsoup.UnsupportedMimeTypeException;
 //Web crawler class
 public class Crawler {
 
-    //Instantiation of database object
-    public static DB db = new DB();
+    public DB db;
 
-    //Main method
-    public static void main(String[] args) throws SQLException, IOException {
+    //Constructor
+    public Crawler(DB db) throws SQLException, IOException {
+
+        //Set class variables
+        this.db = db;
+
         //Clear database
         db.runSql2("TRUNCATE _records;");
+
         //Begin crawling
-        processPage("http://www.goodreads.com/");
+        processPage(Iterator.URL);
     }
 
 
-    public static void processPage(String URL) throws SQLException, IOException{
+    public void processPage(String URL) throws SQLException, IOException{
         //Check database for URLe
         String sql = "select * from _records where URL = '"+URL+"'";
         ResultSet rs = db.runSql(sql);
@@ -39,7 +43,7 @@ public class Crawler {
             //Do nothing
         }else{
             //Store the URL to database to avoid parsing again
-            sql = "INSERT INTO _dipre._records " + "(URL) VALUES " + "(?);";
+            sql = "INSERT INTO _dipre._records (URL) VALUES (?)";
             PreparedStatement stmt = db.conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
             stmt.setString(1, URL);
             stmt.execute();
@@ -49,7 +53,7 @@ public class Crawler {
                 Document doc = Jsoup.connect(URL).get();
 
                 //Check for string
-                if(doc.text().contains("Dan Brown")){
+                if(doc.text().contains(Iterator.SEARCH_TERM)){
                     System.out.println("Positive - " + URL);
                 }
 
@@ -67,12 +71,13 @@ public class Crawler {
                 }
             } catch (SocketTimeoutException | HttpStatusException | UnsupportedMimeTypeException | IllegalArgumentException | MalformedURLException e) {
                 //Do nothing
+                System.out.println(e.toString());
             }
         }
     }
 
     //Trim parameters and anchors from the end of the URL
-    public static String trimURL(String URL, char trimCharacter) {
+    public String trimURL(String URL, char trimCharacter) {
         //Get the index of ? or #
         int trimIndex = URL.indexOf(trimCharacter);
 
